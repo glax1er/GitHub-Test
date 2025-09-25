@@ -137,6 +137,8 @@
   </table>
 
   <script>
+
+    
     const lineItems = document.querySelector("#lineItems tbody");
     const journalTable = document.querySelector("#journalTable tbody");
     const errorMsg = document.getElementById("errorMsg");
@@ -145,7 +147,7 @@
       const row = document.createElement("tr");
       row.innerHTML = `
         <td class="account"><input type="text" placeholder="e.g., Cash" required></td>
-        <td class="ref"><input type="text" placeholder="e.g., J001" required></td>
+        <td class="ref"><input type="text" placeholder="e.g., 123" required></td>
         <td><input type="number" step="0.01" value="0" oninput="lockCredit(this)"></td>
         <td><input type="number" step="0.01" value="0" oninput="lockDebit(this)"></td>
       `;
@@ -242,11 +244,13 @@
       document.getElementById("comment").value = "";
       addRow();
       addRow();
+
     }
 
     // Start with 2 rows by default
     addRow();
     addRow();
+
   </script>
 
 </body>
