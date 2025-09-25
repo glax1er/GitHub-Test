@@ -10,7 +10,7 @@
       margin: 20px;
       background: #f4f6f9;
     }
-    h1 {
+    h1, h2 {
       text-align: center;
     }
     .entry-form {
@@ -19,19 +19,19 @@
       border-radius: 8px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.2);
       margin-bottom: 20px;
-      overflow-x: auto;
     }
     label {
       font-weight: bold;
+      margin-right: 8px;
     }
     input, textarea {
       padding: 6px;
       border-radius: 4px;
       border: 1px solid #ccc;
+      box-sizing: border-box;
     }
     input[type="date"] {
-      width: 150px;
-      margin-bottom: 10px;
+      width: 160px;
     }
     textarea {
       resize: none;
@@ -43,24 +43,50 @@
       border-collapse: collapse;
       margin-top: 10px;
       background: #fff;
+      table-layout: fixed;
     }
     th, td {
       padding: 8px;
       border: 1px solid #ddd;
       text-align: center;
+      vertical-align: top;
+      word-wrap: break-word;
     }
     th {
       background: #007bff;
       color: white;
     }
+
+    /* Fix action button alignment */
+    #journalBody td:last-child {
+      text-align: center;
+      vertical-align: middle; /* removes that upward offset */
+      padding: 0; /* removes extra top/bottom padding */
+    }
+    #journalBody td:last-child button {
+      margin: 2px 0; /* keep button centered nicely */
+    }
+
+    /* Separator row for spacing */
+    .separator-row td {
+      border: none;
+      height: 12px;   /* controls the space between entries */
+      background: transparent;
+    }
+
+
     td input {
       width: 100%;
-      box-sizing: border-box;
+      border: none;
+      outline: none;
+      background: transparent;
+      text-align: center;
     }
-    td.account input { width: 180px; }
-    td.ref input { width: 100px; }
+    td input[type="text"] {
+      text-align: left;
+    }
     button {
-      padding: 8px 12px;
+      padding: 6px 10px;
       margin-top: 10px;
       background: #007bff;
       color: white;
@@ -70,6 +96,23 @@
     }
     button:hover {
       background: #0056b3;
+    }
+    .remove-btn {
+      background: #dc3545;
+      padding: 4px 6px;
+      font-size: 12px;
+    }
+    .remove-btn:hover {
+      background: #a71d2a;
+    }
+    .delete-entry-btn {
+      background: #dc3545;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .delete-entry-btn:hover {
+      background: #a71d2a;
     }
     .error {
       color: red;
@@ -82,11 +125,24 @@
     .debit-cell {
       text-align: left;
     }
+    /* Comment row only under Account Title */
     .comment-row td {
       font-style: italic;
       text-align: left;
-      text-indent: 50px;
+      border-top: none;
+      border-bottom: 1px solid #ddd;
+      white-space: normal;
+      word-break: break-word;
+      text-indent: 40px;
     }
+    .editable {
+      cursor: pointer;
+    }
+    th:nth-child(2), td:nth-child(2) { text-align: left; } /* Account Title */
+    th:nth-child(3), td:nth-child(3),
+    th:nth-child(4), td:nth-child(4),
+    th:nth-child(5), td:nth-child(5) { text-align: center; } /* Ref, Debit, Credit */
+    th:last-child, td:last-child { width: 60px; } /* Action column small */
   </style>
 </head>
 <body>
@@ -94,29 +150,33 @@
   <h1>Journal Entry System</h1>
 
   <div class="entry-form">
-    <label for="date">Date:</label>
-    <input type="date" id="date" required>
+    <!-- Date input -->
+    <div>
+      <label for="date">Date:</label>
+      <input type="date" id="date" required>
+    </div>
 
+    <!-- Entry line form -->
     <table id="lineItems">
       <thead>
         <tr>
           <th>Account Title</th>
-          <th>Reference No</th>
+          <th style="text-align: center;">Reference No</th>
           <th>Debit</th>
           <th>Credit</th>
+          <th></th>
         </tr>
       </thead>
-      <tbody>
-        <!-- Line items go here -->
-      </tbody>
+      <tbody></tbody>
     </table>
     
+    <!-- Comment box -->
     <label for="comment">Comment:</label>
-    <textarea id="comment" rows="2" placeholder="Enter explanation for this entry"></textarea>
+    <textarea id="comment" rows="2" placeholder="Comments or default as '#'"></textarea>
     
     <br>
-    <button type="button" onclick="addRow()">Add Line</button>
-    <button type="button" onclick="saveEntry()">Save Entry</button>
+    <button type="button" onclick="addRow()">Add Account Title</button>
+    <button type="button" onclick="saveEntry()">Save Journal Entry</button>
     <p class="error" id="errorMsg"></p>
   </div>
 
@@ -124,36 +184,41 @@
   <table id="journalTable">
     <thead>
       <tr>
-        <th>Date</th>
-        <th>Account Title</th>
-        <th>Ref No</th>
-        <th>Debit</th>
-        <th>Credit</th>
+        <th style="width:15%">Date</th>
+        <th style="width:35%; text-align: center";>Account Title</th>
+        <th style="width:15%">Ref No</th>
+        <th style="width:15%">Debit</th>
+        <th style="width:15%">Credit</th>
+        <th style="width:5%"></th>
       </tr>
     </thead>
-    <tbody>
-      <!-- Saved entries go here -->
-    </tbody>
+    <tbody id="journalBody"></tbody>
   </table>
 
   <script>
-
-    
     const lineItems = document.querySelector("#lineItems tbody");
-    const journalTable = document.querySelector("#journalTable tbody");
+    const journalBody = document.querySelector("#journalBody");
     const errorMsg = document.getElementById("errorMsg");
 
-    function addRow() {
+    // Add a new row to the form (default 2 rows not removable)
+    function addRow(removable = true) {
       const row = document.createElement("tr");
       row.innerHTML = `
-        <td class="account"><input type="text" placeholder="e.g., Cash" required></td>
-        <td class="ref"><input type="text" placeholder="e.g., 123" required></td>
+        <td><input type="text" placeholder="e.g., Cash" required></td>
+        <td><input type="text" placeholder="e.g., 123" required></td>
         <td><input type="number" step="0.01" value="0" oninput="lockCredit(this)"></td>
         <td><input type="number" step="0.01" value="0" oninput="lockDebit(this)"></td>
+        <td>${removable ? '<button type="button" class="remove-btn" onclick="removeRow(this)">X</button>' : ''}</td>
       `;
       lineItems.appendChild(row);
     }
 
+    // Remove row (only if removable)
+    function removeRow(button) {
+      button.closest("tr").remove();
+    }
+
+    // Lock credit if debit entered
     function lockCredit(debitInput) {
       const creditInput = debitInput.parentElement.nextElementSibling.querySelector("input");
       if (parseFloat(debitInput.value) > 0) {
@@ -164,6 +229,7 @@
       }
     }
 
+    // Lock debit if credit entered
     function lockDebit(creditInput) {
       const debitInput = creditInput.parentElement.previousElementSibling.querySelector("input");
       if (parseFloat(creditInput.value) > 0) {
@@ -174,10 +240,10 @@
       }
     }
 
+    // Save entry into journal table
     function saveEntry() {
       const date = document.getElementById("date").value;
       let comment = document.getElementById("comment").value.trim();
-
       let totalDebit = 0, totalCredit = 0;
       const rows = lineItems.querySelectorAll("tr");
 
@@ -185,10 +251,8 @@
         errorMsg.textContent = "Please fill out date and at least 2 lines (debit + credit).";
         return;
       }
+      if (!comment) comment = "#"; 
 
-      if (!comment) comment = "#"; // default comment
-
-      // Collect and check balance
       let entryRows = [];
       rows.forEach(row => {
         const account = row.querySelector("td:nth-child(1) input").value.trim();
@@ -207,50 +271,100 @@
         return;
       }
 
-      errorMsg.textContent = ""; // clear error
+      errorMsg.textContent = ""; 
 
-      // Add rows to Journal Table
+      // Add each line of the entry
       entryRows.forEach((r, index) => {
         const newRow = document.createElement("tr");
         let accountCellClass = r.credit > 0 ? "credit-cell" : "debit-cell";
-
         newRow.innerHTML = `
           <td>${index === 0 ? date : ""}</td>
-          <td class="${accountCellClass}">${r.account}</td>
-          <td>${r.ref}</td>
-          <td>${r.debit > 0 ? r.debit.toFixed(2) : ""}</td>
-          <td>${r.credit > 0 ? r.credit.toFixed(2) : ""}</td>
+          <td class="editable ${accountCellClass}" data-type="account">${r.account}</td>
+          <td class="editable" data-type="ref">${r.ref}</td>
+          <td class="${r.debit > 0 ? 'editable' : ''}" data-type="debit">${r.debit > 0 ? r.debit.toFixed(2) : ""}</td>
+          <td class="${r.credit > 0 ? 'editable' : ''}" data-type="credit">${r.credit > 0 ? r.credit.toFixed(2) : ""}</td>
+          <td>${index === 0 ? '<button class="delete-entry-btn" onclick="deleteEntry(this)">Delete</button>' : ''}</td>
         `;
-        journalTable.appendChild(newRow);
+        journalBody.appendChild(newRow);
       });
 
-      // Add comment row aligned with Account Title column
+      // Add comment row under Account Title
       const commentRow = document.createElement("tr");
       commentRow.classList.add("comment-row");
       commentRow.innerHTML = `
         <td></td>
-        <td colspan="4"> ${comment}</td>
+        <td class="editable" data-type="comment">${comment}</td>
+        <td></td><td></td><td></td><td></td>
       `;
-      journalTable.appendChild(commentRow);
+      journalBody.appendChild(commentRow);
 
-      // Separator row
-      const sepRow = document.createElement("tr");
-      sepRow.innerHTML = `<td colspan="5" style="background:#f1f1f1;"></td>`;
-      journalTable.appendChild(sepRow);
+      let separator = document.createElement("tr");
+      separator.classList.add("separator-row");
+      separator.innerHTML = `<td colspan="6"></td>`;
+      journalBody.appendChild(separator);
 
       // Reset form
       lineItems.innerHTML = "";
       document.getElementById("date").value = "";
       document.getElementById("comment").value = "";
-      addRow();
-      addRow();
-
+      addRow(false);
+      addRow(false);
     }
 
-    // Start with 2 rows by default
-    addRow();
-    addRow();
+    // Delete whole journal entry
+    function deleteEntry(button) {
+      let row = button.closest("tr");
+      let next = row.nextElementSibling;
+      while (next && !next.querySelector(".delete-entry-btn")) {
+        let toDelete = next;
+        next = next.nextElementSibling;
+        toDelete.remove();
+      }
+      row.remove();
+    }
 
+    // Editing in journal
+    journalBody.addEventListener("click", function(e) {
+      if (e.target.classList.contains("editable")) {
+        let cell = e.target;
+        let type = cell.dataset.type;
+        let currentValue = cell.textContent;
+
+        if (type === "comment") {
+          currentValue = currentValue.replace("Comment: ", "");
+        }
+
+        cell.innerHTML = `<input type="${(type === "debit" || type === "credit") ? "number" : "text"}" value="${currentValue}">`;
+        let input = cell.querySelector("input");
+
+        // Focus cursor at end
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+
+        input.addEventListener("blur", () => saveEdit(cell, input.value, type));
+        input.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter") saveEdit(cell, input.value, type);
+        });
+      }
+    });
+
+    function saveEdit(cell, newValue, type) {
+      newValue = newValue.trim();
+      if (type === "comment") {
+        cell.textContent = "Comment: " + (newValue || "#");
+      } else if (type === "debit" || type === "credit") {
+        let num = parseFloat(newValue);
+        cell.textContent = isNaN(num) ? "" : num.toFixed(2);
+      } else {
+        cell.textContent = newValue;
+      }
+      cell.classList.add("editable");
+      cell.dataset.type = type;
+    }
+
+    // Initialize with 2 default rows
+    addRow(false);
+    addRow(false);
   </script>
 
 </body>
