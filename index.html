@@ -1,17 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document!!!</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Journal Entry System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f6f9;
+    }
+    h1 {
+      text-align: center;
+    }
+    form {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 15px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: #fff;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+  </style>
 </head>
 <body>
-    <title>This is a GitHub Test!!!</title>
-    <h1>Hello World</h1>
-    <p>This is a test file for GitHub.</p>
-    <p>This is another change</p>
-    <strong>Another commit</strong>
-    <strong>Another 2nd commit</strong>
-    <strong>Another 3rd commit</strong>
+
+  <h1>Journal Entry System</h1>
+
+  <form id="journalForm">
+    <label for="date">Date:</label>
+    <input type="date" id="date" required>
+
+    <label for="account">Account Title:</label>
+    <input type="text" id="account" placeholder="e.g., Cash, Accounts Receivable" required>
+
+    <label for="ref">Reference No:</label>
+    <input type="text" id="ref" placeholder="e.g., J001" required>
+
+    <label for="debit">Debit:</label>
+    <input type="number" id="debit" step="0.01" value="0">
+
+    <label for="credit">Credit:</label>
+    <input type="number" id="credit" step="0.01" value="0">
+
+    <button type="submit">Add Entry</button>
+  </form>
+
+  <table id="journalTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Account Title</th>
+        <th>Ref No</th>
+        <th>Debit</th>
+        <th>Credit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Entries will be added here -->
+    </tbody>
+  </table>
+
+  <script>
+    const form = document.getElementById("journalForm");
+    const tableBody = document.querySelector("#journalTable tbody");
+
+    form.addEventListener("submit", function(event) {
+      event.preventDefault();
+
+      const date = document.getElementById("date").value;
+      const account = document.getElementById("account").value;
+      const ref = document.getElementById("ref").value;
+      const debit = parseFloat(document.getElementById("debit").value).toFixed(2);
+      const credit = parseFloat(document.getElementById("credit").value).toFixed(2);
+
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${date}</td>
+        <td>${account}</td>
+        <td>${ref}</td>
+        <td>${debit}</td>
+        <td>${credit}</td>
+      `;
+      tableBody.appendChild(row);
+
+      // Clear form
+      form.reset();
+      document.getElementById("debit").value = 0;
+      document.getElementById("credit").value = 0;
+    });
+  </script>
+
 </body>
 </html>
