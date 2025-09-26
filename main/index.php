@@ -41,7 +41,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
+      margin-top: 15px;
       background: #fff;
       table-layout: fixed;
     }
@@ -135,6 +135,9 @@
       word-break: break-word;
       text-indent: 40px;
     }
+    .indent {
+      padding-left: 30px; 
+    }
     .editable {
       cursor: pointer;
     }
@@ -180,7 +183,15 @@
     <p class="error" id="errorMsg"></p>
   </div>
 
-  <h2>Journal Entries</h2>
+  <div style="position: relative; text-align: center;">
+    <h2 style="margin:0;">Journal Entries</h2>
+    <button 
+      style="position: absolute; right: 0; top: 50%; transform: translateY(-50%);" 
+      onclick="restartJournals()">
+      Restart Entries
+    </button>
+  </div>
+
   <table id="journalTable">
     <thead>
       <tr>
@@ -194,6 +205,22 @@
     </thead>
     <tbody id="journalBody"></tbody>
   </table>
+
+    <script>
+    async function restartJournals() {
+      if (!confirm("Are you sure you want to restart? This will wipe ALL journal entries.")) return;
+
+      const res = await fetch("restart.php", { method: "POST" });
+      const data = await res.json();
+
+      if (data.success) {
+        alert("Journal reset successful.");
+        loadEntries(); // refresh the table
+      } else {
+        alert("Reset failed: " + data.error);
+      }
+    }
+    </script>
 
   <script>
     const lineItems = document.querySelector("#lineItems tbody");
@@ -241,75 +268,105 @@
     }
 
     // Save entry into journal table
-    function saveEntry() {
-      const date = document.getElementById("date").value;
-      let comment = document.getElementById("comment").value.trim();
-      let totalDebit = 0, totalCredit = 0;
-      const rows = lineItems.querySelectorAll("tr");
+    async function saveEntry() {
+  const date = document.getElementById("date").value;
+  let comment = document.getElementById("comment").value.trim() || "#";
 
-      if (!date || rows.length < 2) {
-        errorMsg.textContent = "Please fill out date and at least 2 lines (debit + credit).";
-        return;
-      }
-      if (!comment) comment = "#"; 
+  const rows = [...lineItems.querySelectorAll("tr")].map(r => {
+    return {
+      account_id: r.querySelector("td:nth-child(1) input").value.trim(), // change to real ID later
+      ref: r.querySelector("td:nth-child(2) input").value.trim(),
+      debit: parseFloat(r.querySelector("td:nth-child(3) input").value) || 0,
+      credit: parseFloat(r.querySelector("td:nth-child(4) input").value) || 0,
+    };
+  });
 
-      let entryRows = [];
-      rows.forEach(row => {
-        const account = row.querySelector("td:nth-child(1) input").value.trim();
-        const ref = row.querySelector("td:nth-child(2) input").value.trim();
-        const debit = parseFloat(row.querySelector("td:nth-child(3) input").value) || 0;
-        const credit = parseFloat(row.querySelector("td:nth-child(4) input").value) || 0;
+  const res = await fetch("save_journal.php", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ date, comment, lines: rows })
+  });
+  const data = await res.json();
 
-        totalDebit += debit;
-        totalCredit += credit;
+  if (data.success) {
+    alert("Saved successfully!");
+    loadEntries();
+  } else {
+    alert("Error: " + data.error);
+  }
+}
 
-        entryRows.push({ account, ref, debit, credit });
-      });
+async function loadEntries() {
+  const res = await fetch("get_journals.php");
+  const data = await res.json();
+  console.log("Loaded entries:", data);
 
-      if (totalDebit !== totalCredit) {
-        errorMsg.textContent = "Debits and Credits must be equal!";
-        return;
-      }
+  journalBody.innerHTML = "";
 
-      errorMsg.textContent = ""; 
-
-      // Add each line of the entry
-      entryRows.forEach((r, index) => {
-        const newRow = document.createElement("tr");
-        let accountCellClass = r.credit > 0 ? "credit-cell" : "debit-cell";
-        newRow.innerHTML = `
-          <td>${index === 0 ? date : ""}</td>
-          <td class="editable ${accountCellClass}" data-type="account">${r.account}</td>
-          <td class="editable" data-type="ref">${r.ref}</td>
-          <td class="${r.debit > 0 ? 'editable' : ''}" data-type="debit">${r.debit > 0 ? r.debit.toFixed(2) : ""}</td>
-          <td class="${r.credit > 0 ? 'editable' : ''}" data-type="credit">${r.credit > 0 ? r.credit.toFixed(2) : ""}</td>
-          <td>${index === 0 ? '<button class="delete-entry-btn" onclick="deleteEntry(this)">Delete</button>' : ''}</td>
-        `;
-        journalBody.appendChild(newRow);
-      });
-
-      // Add comment row under Account Title
-      const commentRow = document.createElement("tr");
-      commentRow.classList.add("comment-row");
-      commentRow.innerHTML = `
-        <td></td>
-        <td class="editable" data-type="comment">${comment}</td>
-        <td></td><td></td><td></td><td></td>
+  data.forEach(entry => {
+    entry.lines.forEach((line, index) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${index === 0 ? entry.date : ""}</td>
+        <td contenteditable="true" 
+            data-type="account" 
+            data-line="${line.line_id}" 
+            class="${index > 0 ? "indent" : ""}">
+          ${line.account_name}
+        </td>
+        <td contenteditable="true" data-type="ref" data-line="${line.line_id}">${line.ref}</td>
+        <td contenteditable="true" data-type="debit" data-line="${line.line_id}">${line.debit > 0 ? line.debit.toFixed(2) : ""}</td>
+        <td contenteditable="true" data-type="credit" data-line="${line.line_id}">${line.credit > 0 ? line.credit.toFixed(2) : ""}</td>
+        <td>
+          ${index === 0 ? `<button onclick="deleteEntry(${entry.id})">Delete</button>` : ""}
+        </td>
       `;
-      journalBody.appendChild(commentRow);
+      journalBody.appendChild(row);
+    });
 
-      let separator = document.createElement("tr");
-      separator.classList.add("separator-row");
-      separator.innerHTML = `<td colspan="6"></td>`;
-      journalBody.appendChild(separator);
+    // Add the comment row (editable too)
+    const commentRow = document.createElement("tr");
+    commentRow.innerHTML = `
+      <td></td>
+      <td colspan="4" contenteditable="true" data-type="comment" data-entry="${entry.id}" style="padding-left: 60px; font-style: italic; color: black;">
+        ${entry.comment}
+      </td>
+      <td></td>
+    `;
+    journalBody.appendChild(commentRow);
 
-      // Reset form
-      lineItems.innerHTML = "";
-      document.getElementById("date").value = "";
-      document.getElementById("comment").value = "";
-      addRow(false);
-      addRow(false);
-    }
+    // Spacer row
+    const spacer = document.createElement("tr");
+    spacer.innerHTML = `<td colspan="6" style="height:10px; border-bottom:1px solid #ddd;"></td>`;
+    journalBody.appendChild(spacer);
+  });
+
+  // Attach save handler
+  document.querySelectorAll("[contenteditable]").forEach(cell => {
+    cell.addEventListener("blur", async (e) => {
+      const value = e.target.innerText.trim();
+      const type = e.target.dataset.type;
+      const lineId = e.target.dataset.line;
+      const entryId = e.target.dataset.entry;
+
+      const payload = { type, value, lineId, entryId };
+
+      const res = await fetch("update_entries.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert("Update failed: " + data.error);
+      }
+    });
+  });
+}
+
+
+
+window.addEventListener("DOMContentLoaded", loadEntries);
 
     // Delete whole journal entry
     function deleteEntry(button) {
