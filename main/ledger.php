@@ -18,7 +18,7 @@ $accounts = $accountsStmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/png" href="ivan.jpg">
-<title>Ledger</title>
+<title>Ledger System</title>
 <style>
 body { font-family: Arial; margin: 20px; background: #f4f6f9; }
 h1 { text-align: center; margin-bottom: 20px; }
@@ -41,7 +41,6 @@ button {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    font-weight: bold;
     transition: all 0.2s ease-in-out;
 }
 
@@ -66,7 +65,7 @@ button:active {
 </style>
 </head>
 <body>
-<h1>Ledger</h1>
+<h1>Ledger System</h1>
 <button type="button" onclick="window.location.href='index.php'">
     Go back to Journal Entries
 </button>
@@ -128,10 +127,15 @@ button:active {
             <td></td>
         </tr>
         <tr class="total-row">
-            <td colspan="4">Ending Balance</td>
-            <td class="balance <?= $runningBalance >= 0 ? 'balance-positive' : 'balance-negative' ?>">
-                <?= number_format(abs($runningBalance), 2) ?>
-            </td>
+            <td colspan="2">Ending Balance</td>
+            <?php if (in_array($acc['type'], ['Asset', 'Expense'])): ?>
+                <td class="balance balance-positive"><?= number_format(abs($runningBalance), 2) ?></td>
+                <td></td>
+            <?php else: ?>
+                <td></td>
+                <td class="balance balance-positive"><?= number_format(abs($runningBalance), 2) ?></td>
+            <?php endif; ?>
+            <td></td>
         </tr>
         </tbody>
     </table>
