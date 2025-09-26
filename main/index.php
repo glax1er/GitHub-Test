@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="ivan.jpg">
   <title>Journal Entry System</title>
   <style>
     body {
@@ -185,11 +186,14 @@
 
   <div style="position: relative; text-align: center;">
     <h2 style="margin:0;">Journal Entries</h2>
-    <button 
-      style="position: absolute; right: 0; top: 50%; transform: translateY(-50%);" 
-      onclick="restartJournals()">
-      Restart Entries
-    </button>
+    <div style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: flex; gap: 10px;">
+      <button onclick="restartJournals()">
+        Restart Entries
+      </button>
+      <button type="button" onclick="window.location.href='ledger.php'">
+        Proceed to Ledger
+      </button>
+    </div>
   </div>
 
   <table id="journalTable">
@@ -368,17 +372,32 @@ async function loadEntries() {
 
 window.addEventListener("DOMContentLoaded", loadEntries);
 
-    // Delete whole journal entry
-    function deleteEntry(button) {
-      let row = button.closest("tr");
-      let next = row.nextElementSibling;
-      while (next && !next.querySelector(".delete-entry-btn")) {
-        let toDelete = next;
-        next = next.nextElementSibling;
-        toDelete.remove();
+    async function deleteEntry(entryId) {
+      if (!confirm("Are you sure you want to delete this entry?")) return;
+
+      const res = await fetch("delete_entry.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: entryId })
+      });
+
+      const text = await res.text();
+      console.log("Server response:", text); // <--- see what it actually sends
+
+      try {
+        const data = JSON.parse(text);
+        if (data.success) {
+          alert("Entry deleted!");
+          loadEntries();
+        } else {
+          alert("Delete failed: " + data.error);
+        }
+      } catch (err) {
+        console.error("Failed to parse JSON:", err);
       }
-      row.remove();
     }
+
+
 
     // Editing in journal
     journalBody.addEventListener("click", function(e) {

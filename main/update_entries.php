@@ -1,55 +1,87 @@
 <?php
-require "db.php"; // connection
-
 header("Content-Type: application/json");
+require "db.php";
+
+$data = json_decode(file_get_contents("php://input"), true);
+
+$type    = $data["type"]    ?? null;
+$value   = trim($data["value"] ?? "");
+$lineId  = $data["lineId"]  ?? null;
+$entryId = $data["entryId"] ?? null;
 
 try {
-    $data = json_decode(file_get_contents("php://input"), true);
+    if ($type === "account") {
+        // Check if account exists (case-insensitive, trimmed)
+        $stmt = $pdo->prepare("
+            SELECT id FROM accounts 
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+        ");
+        $stmt->execute([$value]);
+        $account = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$data) {
-        throw new Exception("No data received");
-    }
+        if (!$account) {
+            // Create new account with default type (e.g., Asset)
+            $stmt = $pdo->prepare("
+                INSERT INTO accounts (name, type) 
+                VALUES (?, 'Asset')
+            ");
+            $stmt->execute([$value]);
 
-    $date = $data["date"] ?? null;
-    $comment = $data["comment"] ?? "#";
-    $lines = $data["lines"] ?? [];
-
-    if (!$date || count($lines) < 2) {
-        throw new Exception("Invalid entry. Date and at least 2 lines are required.");
-    }
-
-    // Insert into journal_entries
-    $stmt = $pdo->prepare("INSERT INTO journal_entries (entry_date, comment, created_at) VALUES (?, ?, NOW())");
-    $stmt->execute([$date, $comment]);
-    $journalId = $pdo->lastInsertId();
-
-    // Prepare statements
-    $lineStmt = $pdo->prepare("INSERT INTO journal_lines (journal_id, account_id, ref_no, debit, credit) VALUES (?, ?, ?, ?, ?)");
-    $findAccount = $pdo->prepare("SELECT id FROM accounts WHERE name = ?");
-    $insertAccount = $pdo->prepare("INSERT INTO accounts (name, type) VALUES (?, 'Asset')"); // default to Asset
-
-    foreach ($lines as $line) {
-        $accountName = trim($line["account_id"]); // actually the typed account name
-        $ref = $line["ref"];
-        $debit = $line["debit"];
-        $credit = $line["credit"];
-
-        // Find or create account
-        $findAccount->execute([$accountName]);
-        $accountId = $findAccount->fetchColumn();
-
-        if (!$accountId) {
-            $insertAccount->execute([$accountName]);
             $accountId = $pdo->lastInsertId();
+        } else {
+            $accountId = $account['id'];
         }
 
-        // Insert line
-        $lineStmt->execute([$journalId, $accountId, $ref, $debit, $credit]);
+        // Update journal line with found/created account
+        $stmt = $pdo->prepare("
+            UPDATE journal_lines 
+            SET account_id = ? 
+            WHERE id = ?
+        ");
+        $stmt->execute([$accountId, $lineId]);
+
+    } elseif ($type === "ref") {
+        $stmt = $pdo->prepare("
+            UPDATE journal_lines 
+            SET ref_no = ? 
+            WHERE id = ?
+        ");
+        $stmt->execute([$value, $lineId]);
+
+    } elseif ($type === "debit") {
+        $stmt = $pdo->prepare("
+            UPDATE journal_lines 
+            SET debit = ?, credit = 0 
+            WHERE id = ?
+        ");
+        $stmt->execute([floatval($value), $lineId]);
+
+    } elseif ($type === "credit") {
+        $stmt = $pdo->prepare("
+            UPDATE journal_lines 
+            SET credit = ?, debit = 0 
+            WHERE id = ?
+        ");
+        $stmt->execute([floatval($value), $lineId]);
+
+    } elseif ($type === "comment") {
+        $stmt = $pdo->prepare("
+            UPDATE journal_entries 
+            SET comment = ? 
+            WHERE id = ?
+        ");
+        $stmt->execute([$value, $entryId]);
+
+    } else {
+        echo json_encode(["success" => false, "error" => "Invalid update type"]);
+        exit;
     }
 
-    echo json_encode(["success" => true, "journal_id" => $journalId]);
+    echo json_encode(["success" => true]);
 
 } catch (Exception $e) {
-    http_response_code(400);
-    echo json_encode(["success" => false, "error" => $e->getMessage()]);
+    echo json_encode([
+        "success" => false, 
+        "error" => $e->getMessage()
+    ]);
 }
