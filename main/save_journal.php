@@ -100,10 +100,10 @@ try {
 
     // Keyword-based type detection
     $accountKeywords = [
-        'Asset' => ['cash','bank','inventory','prepaid','supplies','equipment','computer','laptop','printer','furniture','vehicle','land','building','software','school fees'],
+        'Asset' => ['cash','bank','inventory','prepaid','supplies','equipment','computer','laptop','printer','furniture','vehicle','land','building','software'],
         'Liability' => ['payable','loan','credit','accrued','unearned','tax','interest'],
         'Equity' => ['owner','capital','drawing','retained','share','contributed'],
-        'Revenue' => ['revenue','income','fee','sales','service','tuition','lab','library','canteen','commission','rent'],
+        'Revenue' => ['revenue','income','fee','sales','service','tuition','lab','library','canteen','commission','rent','school fees'],
         'Expense' => ['expense','rent','utilities','salary','wages','depreciation','insurance','supplies','office','repairs','advertising','printing','stationery','internet','telephone','travel','professional','books','lab','canteen','miscellaneous','cost of goods sold']
     ];
 

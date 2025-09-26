@@ -121,11 +121,14 @@ button:active {
                 </td>
             </tr>
         <?php endforeach; ?>
-
         <tr class="total-row">
             <td colspan="2">Total</td>
             <td><?= number_format($totalDebit, 2) ?></td>
             <td><?= number_format($totalCredit, 2) ?></td>
+            <td></td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="4">Ending Balance</td>
             <td class="balance <?= $runningBalance >= 0 ? 'balance-positive' : 'balance-negative' ?>">
                 <?= number_format(abs($runningBalance), 2) ?>
             </td>
