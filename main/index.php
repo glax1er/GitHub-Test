@@ -213,10 +213,10 @@
 <table id="trialBalanceTable">
   <thead>
     <tr>
-      <th>Account Title</th>
-      <th>Type</th>
-      <th>Debit</th>
-      <th>Credit</th>
+      <th style="width:35%; text-align: center">Account Title</th>
+      <th style="width:15%">Type</th>
+      <th style="width:15%">Debit</th>
+      <th style="width:15%">Credit</th>
     </tr>
   </thead>
   <tbody id="trialBalanceBody"></tbody>
