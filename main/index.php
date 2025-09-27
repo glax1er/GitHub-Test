@@ -209,6 +209,26 @@
     </thead>
     <tbody id="journalBody"></tbody>
   </table>
+  <h2 style="margin-top:50px;">Trial Balance</h2>
+<table id="trialBalanceTable">
+  <thead>
+    <tr>
+      <th>Account Title</th>
+      <th>Type</th>
+      <th>Debit</th>
+      <th>Credit</th>
+    </tr>
+  </thead>
+  <tbody id="trialBalanceBody"></tbody>
+  <tfoot>
+    <tr>
+      <td colspan="2"><b>Totals</b></td>
+      <td id="totalDebits">0.00</td>
+      <td id="totalCredits">0.00</td>
+    </tr>
+  </tfoot>
+</table>
+
 
     <script>
     async function restartJournals() {
@@ -441,6 +461,37 @@ window.addEventListener("DOMContentLoaded", loadEntries);
     // Initialize with 2 default rows
     addRow(false);
     addRow(false);
+    async function loadTrialBalance() {
+  const res = await fetch("trial_balance.php");
+  const data = await res.json();
+
+  const body = document.getElementById("trialBalanceBody");
+  body.innerHTML = "";
+  let totalDebits = 0, totalCredits = 0;
+
+  data.accounts.forEach(acc => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${acc.account_title}</td>
+      <td>${acc.account_type}</td>
+      <td>${parseFloat(acc.total_debit).toFixed(2)}</td>
+      <td>${parseFloat(acc.total_credit).toFixed(2)}</td>
+    `;
+    body.appendChild(row);
+
+    totalDebits += parseFloat(acc.total_debit);
+    totalCredits += parseFloat(acc.total_credit);
+  });
+
+  document.getElementById("totalDebits").textContent = totalDebits.toFixed(2);
+  document.getElementById("totalCredits").textContent = totalCredits.toFixed(2);
+}
+
+// Refresh trial balance when page loads
+window.addEventListener("DOMContentLoaded", () => {
+  loadTrialBalance();
+});
+
   </script>
 
 </body>
